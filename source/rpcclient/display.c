@@ -472,7 +472,7 @@ void display_share_info_1(FILE *out_hnd, enum action_type action,
 	{
 		case ACTION_HEADER:
 		{
-			fprintf(out_hnd, "Share Info Level 1:\n");
+			//fprintf(out_hnd, "Share Info Level 1:\n");
 
 			break;
 		}
@@ -742,7 +742,7 @@ void display_share(FILE *out_hnd, enum action_type action,
 		}
 		case ACTION_ENUMERATE:
 		{
-			fprintf(out_hnd, "\t%-15.15s%-10.10s%s\n",
+			fprintf(out_hnd, "{share=\"%15s\", type=\"%10s\", %s}\n",
 			                 sname, get_share_type_str(type), comment);
 			break;
 		}

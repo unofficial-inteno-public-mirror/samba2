@@ -529,6 +529,7 @@ typedef struct r_net_share_set_info
 
 } SRV_R_NET_SHARE_SET_INFO;
 
+
 /* SRV_Q_NET_SHARE_ADD */
 typedef struct q_net_share_add
 {

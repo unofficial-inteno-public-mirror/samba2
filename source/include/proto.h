@@ -644,6 +644,10 @@ NTSTATUS cli_srvsvc_net_srv_get_info(struct cli_state *cli,
                                      TALLOC_CTX *mem_ctx,
                                      uint32 switch_value, SRV_INFO_CTR *ctr);
 
+NTSTATUS cli_srvsvc_srv_netshareenumall(struct cli_state *cli, 
+                                     TALLOC_CTX *mem_ctx,
+                                     uint32 switch_value, SRV_SHARE_INFO_CTR *ctr);
+
 /* The following definitions come from libsmb/clistr.c  */
 
 int clistr_push(struct cli_state *cli, void *dest, const char *src, int dest_len, int flags);

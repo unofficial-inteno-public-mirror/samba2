@@ -24,6 +24,220 @@
 #include "includes.h"
 #include "rpcclient.h"
 
+
+typedef enum action_type {
+ACTION_HEADER,
+ACTION_ENUMERATE,
+ACTION_FOOTER
+} action_type_e;
+
+/****************************************************************************
+convert a share type enum to a string
+****************************************************************************/
+char *get_share_type_str(uint32 type)
+{
+	static fstring typestr;
+
+	switch (type)
+	{
+		case STYPE_DISKTREE: fstrcpy(typestr, "Disk"   ); break;
+		case STYPE_PRINTQ  : fstrcpy(typestr, "Printer"); break;	      
+		case STYPE_DEVICE  : fstrcpy(typestr, "Device" ); break;
+		case STYPE_IPC     : fstrcpy(typestr, "IPC"    ); break;      
+		default            : fstrcpy(typestr, "????"   ); break;      
+	}
+	return typestr;
+}
+
+/****************************************************************************
+print shares on a host
+****************************************************************************/
+void display_share(FILE *out_hnd, enum action_type action,
+				char *sname, uint32 type, char *comment)
+{
+	switch (action)
+	{
+		case ACTION_HEADER:
+		{
+			break;
+		}
+		case ACTION_ENUMERATE:
+		{
+			fprintf(out_hnd, "{share=\"%.15s\", type=\"%.10s\", %s}\n",
+			                 sname, get_share_type_str(type), comment);
+			break;
+		}
+		case ACTION_FOOTER:
+		{
+			break;
+		}
+	}
+}
+
+
+/****************************************************************************
+print shares on a host, level 2
+****************************************************************************/
+void display_share2(FILE *out_hnd, enum action_type action,
+				char *sname, uint32 type, char *comment,
+				uint32 perms, uint32 max_uses, uint32 num_uses,
+				char *path, char *passwd)
+{
+	switch (action)
+	{
+		case ACTION_HEADER:
+		{
+			break;
+		}
+		case ACTION_ENUMERATE:
+		{
+			fprintf(out_hnd, "\t%-15.15s%-10.10s%s %x %x %x %s %s\n",
+			                 sname, get_share_type_str(type), comment,
+			                 perms, max_uses, num_uses, path, passwd);
+			break;
+		}
+		case ACTION_FOOTER:
+		{
+			break;
+		}
+	}
+}
+
+/****************************************************************************
+share info level 1 display function
+****************************************************************************/
+void display_share_info_1(FILE *out_hnd, enum action_type action,
+			  SRV_SHARE_INFO_1 *info1)
+{
+	if (info1 == NULL)
+	{
+		return;
+	}
+
+	switch (action)
+	{
+		case ACTION_HEADER:
+		{
+			//fprintf(out_hnd, "Share Info Level 1:\n");
+
+			break;
+		}
+		case ACTION_ENUMERATE:
+		{
+			fstring remark  ;
+			fstring net_name;
+
+			rpcstr_pull(net_name, info1->info_1_str.uni_netname.buffer, sizeof(net_name), info1->info_1_str.uni_netname.uni_str_len*2, 0);
+			rpcstr_pull(remark, info1->info_1_str.uni_remark.buffer, sizeof(remark), info1->info_1_str.uni_remark.uni_str_len*2, 0);
+
+			display_share(out_hnd, action, net_name, info1->info_1.type, remark);
+
+			break;
+		}
+		case ACTION_FOOTER:
+		{
+			//fprintf(out_hnd, "\n");
+			break;
+		}
+	}
+
+}
+
+/****************************************************************************
+share info level 2 display function
+****************************************************************************/
+void display_share_info_2(FILE *out_hnd, enum action_type action,
+			  SRV_SHARE_INFO_2 *info2)
+{
+	if (info2 == NULL)
+	{
+		return;
+	}
+
+	switch (action)
+	{
+		case ACTION_HEADER:
+		{
+			fprintf(out_hnd, "Share Info Level 2:\n");
+
+			break;
+		}
+		case ACTION_ENUMERATE:
+		{
+			fstring remark  ;
+			fstring net_name;
+			fstring path    ;
+			fstring passwd  ;
+
+			rpcstr_pull(net_name, info2->info_2_str.uni_netname.buffer, sizeof(net_name), info2->info_2_str.uni_netname.uni_str_len*2, 0);
+			rpcstr_pull(remark, info2->info_2_str.uni_remark.buffer, sizeof(remark), info2->info_2_str.uni_remark.uni_str_len*2, 0);
+			rpcstr_pull(path, info2->info_2_str.uni_path.buffer, sizeof(path), info2->info_2_str.uni_path.uni_str_len*2, 0);
+			rpcstr_pull(passwd, info2->info_2_str.uni_passwd.buffer, sizeof(passwd), info2->info_2_str.uni_passwd.uni_str_len*2, 0);
+
+			display_share2(out_hnd, action, net_name,
+			      info2->info_2.type, remark, info2->info_2.perms,
+			      info2->info_2.max_uses, info2->info_2.num_uses,
+			      path, passwd);
+
+			break;
+		}
+		case ACTION_FOOTER:
+		{
+			fprintf(out_hnd, "\n");
+			break;
+		}
+	}
+
+}
+
+/****************************************************************************
+share info container display function
+****************************************************************************/
+void display_srv_share_info_ctr(FILE *out_hnd, enum action_type action,
+				SRV_SHARE_INFO_CTR *ctr)
+{
+	if (ctr == NULL)
+	{
+		fprintf(out_hnd, "display_srv_share_info_ctr: unavailable due to an internal error\n");
+	return;
+	}
+
+	switch (action)
+	{
+		case ACTION_HEADER:
+		{
+			break;
+		}
+		case ACTION_ENUMERATE:
+		{
+			int i;
+
+			for (i = 0; i < ctr->num_entries; i++)
+			{
+				switch (ctr->info_level) {
+				case 1:
+					display_share_info_1(out_hnd, ACTION_HEADER   , &(ctr->share.info1[i]));
+					display_share_info_1(out_hnd, ACTION_ENUMERATE, &(ctr->share.info1[i]));
+					display_share_info_1(out_hnd, ACTION_FOOTER   , &(ctr->share.info1[i]));
+					break;
+				case 2:
+					display_share_info_2(out_hnd, ACTION_HEADER   , &(ctr->share.info2[i]));
+					display_share_info_2(out_hnd, ACTION_ENUMERATE, &(ctr->share.info2[i]));
+					display_share_info_2(out_hnd, ACTION_FOOTER   , &(ctr->share.info2[i]));
+					break;
+				default:
+					fprintf(out_hnd, "display_srv_share_info_ctr: Unknown Info Level\n");
+					break;
+				}
+			}
+			break;
+		}
+		case ACTION_FOOTER:
+		{
+			break;
+		}
+	}
+}
 /* Display server query info */
 
 static char *get_server_type_str(uint32 type)
@@ -137,46 +351,6 @@ static void display_server(char *sname, uint32 type, const char *comment)
 	       comment);
 }
 
-static void display_srv_info_101(SRV_INFO_101 *sv101)
-{
-	fstring name;
-	fstring comment;
-
-	unistr2_to_unix(name, &sv101->uni_name, sizeof(name) - 1);
-	unistr2_to_unix(comment, &sv101->uni_comment, sizeof(comment) - 1);
-
-	display_server(name, sv101->srv_type, comment);
-
-	printf("\tplatform_id     :\t%d\n", sv101->platform_id);
-	printf("\tos version      :\t%d.%d\n", sv101->ver_major, 
-	       sv101->ver_minor);
-
-	printf("\tserver type     :\t0x%x\n", sv101->srv_type);
-}
-
-static void display_srv_info_102(SRV_INFO_102 *sv102)
-{
-	fstring name;
-	fstring comment;
-	fstring usr_path;
-	
-	unistr2_to_unix(name, &sv102->uni_name, sizeof(name) - 1);
-	unistr2_to_unix(comment, &sv102->uni_comment, sizeof(comment) - 1);
-	unistr2_to_unix(usr_path, &sv102->uni_usr_path, sizeof(usr_path) - 1);
-
-	display_server(name, sv102->srv_type, comment);
-
-	printf("\tplatform_id     :\t%d\n", sv102->platform_id);
-	printf("\tos version      :\t%d.%d\n", sv102->ver_major, 
-	       sv102->ver_minor);
-
-	printf("\tusers           :\t%x\n", sv102->users);
-	printf("\tdisc, hidden    :\t%x, %x\n", sv102->disc, sv102->hidden);
-	printf("\tannounce, delta :\t%d, %d\n", sv102->announce, 
-	       sv102->ann_delta);
-	printf("\tlicenses        :\t%d\n", sv102->licenses);
-	printf("\tuser path       :\t%s\n", usr_path);
-}
 
 /* Server query info */
 
@@ -203,19 +377,34 @@ static NTSTATUS cmd_srvsvc_srv_query_info(struct cli_state *cli,
 		goto done;
 	}
 
-	/* Display results */
+ done:
+	return result;
+}
 
-	switch (info_level) {
-	case 101:
-		display_srv_info_101(&ctr.srv.sv101);
-		break;
-	case 102:
-		display_srv_info_102(&ctr.srv.sv102);
-		break;
-	default:
-		printf("unsupported info level %d\n", info_level);
-		break;
+static NTSTATUS cmd_srvsvc_srv_netshareenumall(struct cli_state *cli, 
+                                          TALLOC_CTX *mem_ctx,
+                                          int argc, char **argv)
+{
+	uint32 info_level = 101;
+	SRV_SHARE_INFO_CTR ctr;
+	NTSTATUS result = NT_STATUS_UNSUCCESSFUL;
+
+	if (argc > 2) {
+		printf("Usage: %s [infolevel]\n", argv[0]);
+		return NT_STATUS_OK;
 	}
+
+	if (argc == 2)
+		info_level = atoi(argv[1]);
+
+	result = cli_srvsvc_srv_netshareenumall(cli, mem_ctx, info_level, &ctr);
+
+	if (!NT_STATUS_IS_OK(result)) {
+		goto done;
+	}
+
+	/* Display results */
+    display_srv_share_info_ctr(stdout, ACTION_ENUMERATE, &ctr);
 
  done:
 	return result;
@@ -228,6 +417,8 @@ struct cmd_set srvsvc_commands[] = {
 	{ "SRVSVC" },
 
 	{ "srvinfo",    cmd_srvsvc_srv_query_info,  PIPE_SRVSVC, "Server query info", "" },
+
+	{ "netshareenumall",    cmd_srvsvc_srv_netshareenumall,  PIPE_SRVSVC, "Server enumerates to find all shared drives", "" },
 
 	{ NULL }
 };
