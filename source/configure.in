@@ -872,7 +872,7 @@ case "$host_os" in
 		*linux*)   AC_DEFINE(LINUX)
 			BLDSHARED="true"
 			LDSHFLAGS="-shared"
-			DYNEXP="-Wl,--export-dynamic"
+			DYNEXP="-Wl,--export-dynamic -rdynamic -Wl,--rpath,/usr/lib"
 			PICFLAG="-fPIC"
 			SONAMEFLAG="-Wl,-soname="
 			AC_DEFINE(STAT_ST_BLOCKSIZE,512)
