@@ -8706,7 +8706,7 @@ EOF
 
 			BLDSHARED="true"
 			LDSHFLAGS="-shared"
-			DYNEXP="-Wl,--export-dynamic -Wl,-rpath-link,/usr/lib,/lib"
+			DYNEXP="-Wl,--export-dynamic -Wl,-rpath/usr/lib -Wl,-rpath,/lib"
 			PICFLAG="-fPIC"
 			SONAMEFLAG="-Wl,-soname="
 			cat >> confdefs.h <<\EOF
